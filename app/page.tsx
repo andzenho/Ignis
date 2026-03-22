@@ -2,9 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getProjects, createEmptyProject, saveProject } from "@/lib/storage";
+import { getProjects } from "@/lib/storage";
 import { Project } from "@/lib/types";
-import { Plus, Flame, Calendar, TrendingUp } from "lucide-react";
+import { Plus } from "lucide-react";
+
+const STATUS_BADGE: Record<string, { label: string; className: string }> = {
+  planning: { label: "Планирование", className: "bg-zinc-800 text-zinc-400" },
+  active: { label: "Активный", className: "bg-violet-500/20 text-violet-400" },
+  completed: { label: "Завершён", className: "bg-emerald-500/20 text-emerald-400" },
+};
 
 export default function HomePage() {
   const router = useRouter();
@@ -14,109 +20,103 @@ export default function HomePage() {
     setProjects(getProjects());
   }, []);
 
-  const handleNewProject = () => {
-    router.push("/projects/new");
-  };
-
-  const handleOpenProject = (id: string) => {
-    router.push(`/projects/${id}`);
-  };
+  const lastLaunch = (p: Project) =>
+    p.launches.length > 0 ? p.launches[p.launches.length - 1] : null;
 
   return (
     <div className="min-h-screen bg-zinc-950">
-      {/* Header */}
-      <header className="border-b border-zinc-800 px-6 py-4">
+      {/* Top bar */}
+      <header className="border-b border-zinc-800 px-6 h-14 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-violet-500/20">
-            <Flame className="w-5 h-5 text-violet-400" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-zinc-50">Ignis</h1>
-            <p className="text-xs text-zinc-500">Launch Management System</p>
-          </div>
+          <span className="text-xl font-bold text-violet-500">🔥 Ignis</span>
+          <span className="text-zinc-500 text-sm hidden sm:block">
+            Штаб управления запусками
+          </span>
         </div>
+        <button
+          onClick={() => router.push("/projects/new")}
+          className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-sm font-medium transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Создать проект
+        </button>
       </header>
 
-      {/* Main */}
       <main className="max-w-5xl mx-auto px-6 py-10">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-2xl font-bold text-zinc-50">Проекты</h2>
-            <p className="text-sm text-zinc-400 mt-1">
-              Управляйте запусками ваших курсов
-            </p>
-          </div>
-          <button
-            onClick={handleNewProject}
-            className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-sm font-medium transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Новый проект
-          </button>
-        </div>
-
         {projects.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-zinc-900 border border-zinc-800 mx-auto mb-4">
-              <Flame className="w-8 h-8 text-zinc-600" />
-            </div>
-            <h3 className="text-lg font-medium text-zinc-400 mb-2">
-              Нет проектов
-            </h3>
-            <p className="text-sm text-zinc-600 mb-6">
-              Создайте первый проект, чтобы начать работу
-            </p>
+          /* Empty state */
+          <div className="flex flex-col items-center justify-center py-32 gap-4">
+            <span className="text-6xl">🚀</span>
+            <p className="text-zinc-400 text-lg font-medium">Создайте первый проект</p>
+            <p className="text-zinc-600 text-sm">Все ваши запуски будут здесь</p>
             <button
-              onClick={handleNewProject}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-sm font-medium transition-colors"
+              onClick={() => router.push("/projects/new")}
+              className="mt-2 px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-sm font-medium transition-colors"
             >
-              <Plus className="w-4 h-4" />
-              Создать проект
+              Начать
             </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projects.map((project) => (
-              <button
-                key={project.id}
-                onClick={() => handleOpenProject(project.id)}
-                className="text-left p-5 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-zinc-700 hover:bg-zinc-800/50 transition-all group"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-violet-500/10 border border-violet-500/20">
-                    <Flame className="w-5 h-5 text-violet-400" />
-                  </div>
-                  <span className="text-xs text-zinc-600 group-hover:text-zinc-500">
-                    {project.launches.length} запусков
-                  </span>
-                </div>
-                <h3 className="font-semibold text-zinc-50 mb-1">
-                  {project.name || "Без названия"}
-                </h3>
-                <p className="text-xs text-zinc-500">
-                  {project.expert.name || "Эксперт не указан"}
-                </p>
-                <div className="flex items-center gap-4 mt-3 pt-3 border-t border-zinc-800">
-                  <div className="flex items-center gap-1.5 text-xs text-zinc-500">
-                    <Calendar className="w-3.5 h-3.5" />
-                    <span>
-                      {new Date(project.createdAt).toLocaleDateString("ru-RU")}
-                    </span>
-                  </div>
-                  {project.launches.some((l) => l.status === "active") && (
-                    <div className="flex items-center gap-1.5 text-xs text-emerald-500">
-                      <TrendingUp className="w-3.5 h-3.5" />
-                      <span>Активный запуск</span>
-                    </div>
-                  )}
-                </div>
-              </button>
-            ))}
+            {projects.map((project) => {
+              const last = lastLaunch(project);
+              const badge = last ? STATUS_BADGE[last.status] : null;
+              return (
+                <button
+                  key={project.id}
+                  onClick={() => router.push(`/projects/${project.id}`)}
+                  className="text-left bg-zinc-900 border border-zinc-800 rounded-xl p-6 hover:bg-zinc-800 cursor-pointer transition-colors flex flex-col gap-3"
+                >
+                  {/* Name */}
+                  <p className="font-semibold text-lg text-zinc-50 leading-tight truncate">
+                    {project.name || "Без названия"}
+                  </p>
 
-            {/* New project card */}
+                  {/* Expert */}
+                  {project.expert.name && (
+                    <p className="text-zinc-400 text-sm truncate">{project.expert.name}</p>
+                  )}
+
+                  {/* Product */}
+                  {project.product.name && (
+                    <p className="text-zinc-400 text-sm truncate">{project.product.name}</p>
+                  )}
+
+                  {/* Launches row */}
+                  <div className="flex items-center gap-2 mt-auto">
+                    <span className="text-zinc-500 text-sm">
+                      {project.launches.length}{" "}
+                      {project.launches.length === 1
+                        ? "запуск"
+                        : project.launches.length < 5
+                        ? "запуска"
+                        : "запусков"}
+                    </span>
+                    {badge && (
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${badge.className}`}
+                      >
+                        {badge.label}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Updated */}
+                  <p className="text-zinc-500 text-xs">
+                    {new Date(project.updatedAt).toLocaleDateString("ru-RU", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </p>
+                </button>
+              );
+            })}
+
+            {/* Add card */}
             <button
-              onClick={handleNewProject}
-              className="text-left p-5 bg-zinc-900/50 border border-dashed border-zinc-800 rounded-xl hover:border-zinc-700 hover:bg-zinc-900 transition-all flex flex-col items-center justify-center gap-2 min-h-[140px]"
+              onClick={() => router.push("/projects/new")}
+              className="flex flex-col items-center justify-center gap-2 bg-zinc-900/50 border border-dashed border-zinc-800 rounded-xl p-6 hover:border-zinc-700 hover:bg-zinc-900 transition-colors min-h-[160px]"
             >
               <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-zinc-800 border border-zinc-700">
                 <Plus className="w-5 h-5 text-zinc-500" />

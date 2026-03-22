@@ -3,7 +3,66 @@
 import { useRouter } from "next/navigation";
 import { saveLaunch, createEmptyLaunch } from "@/lib/storage";
 import { useProjectContext } from "@/lib/context/ProjectContext";
-import { Plus, Rocket, Calendar, TrendingUp, Clock } from "lucide-react";
+import { Expert, Product } from "@/lib/types";
+import { Plus } from "lucide-react";
+
+// ── Progress helpers ──────────────────────────────────────────────────────────
+
+const EXPERT_STRING_KEYS: (keyof Expert)[] = [
+  "name", "positioning", "city", "pivotMoment", "backgroundBefore",
+  "howCameToNiche", "firstFailure", "firstWinMoment", "personalTransformation",
+  "mainExpertise", "methodName", "methodDescription", "methodDifference",
+  "personalResults", "achievements", "nicheMythsBusted", "nicheInsiderKnowledge",
+  "redLines", "coreBelief", "publicDisagreements", "whatAngersYou",
+  "lifeValues", "dailyRoutine", "hobbies", "inspirationSources",
+  "signatureLifeTopics", "audienceNickname", "audienceLovesYouFor",
+  "audienceCritiquesYouFor", "forbiddenTopics",
+];
+
+const PRODUCT_STRING_KEYS: (keyof Product)[] = [
+  "name", "duration", "mainResult", "afterResult", "idealStudent",
+  "notFor", "mainPain", "transformationA", "transformationB", "costOfInaction",
+  "uniqueAdvantage", "vsCompetitors", "earlyBirdBonus", "mostValuablePart",
+  "secretIngredient", "supportFormat", "guarantee",
+];
+
+function calcProgress<T extends object>(obj: T, keys: (keyof T)[]): number {
+  const filled = keys.filter((k) => {
+    const v = obj[k];
+    return typeof v === "string" && v.trim().length > 0;
+  }).length;
+  return Math.round((filled / keys.length) * 100);
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function ProgressBar({ pct }: { pct: number }) {
+  return (
+    <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+      <div
+        className="h-full bg-violet-500 rounded-full transition-all"
+        style={{ width: `${pct}%` }}
+      />
+    </div>
+  );
+}
+
+const STATUS_BADGE: Record<string, { label: string; className: string }> = {
+  planning: { label: "Планирование", className: "bg-zinc-800 text-zinc-400" },
+  active: { label: "Активный", className: "bg-violet-500/20 text-violet-400" },
+  completed: { label: "Завершён", className: "bg-emerald-500/20 text-emerald-400" },
+};
+
+const FORMAT_LABELS: Record<string, string> = {
+  course: "Курс",
+  mentoring: "Менторство",
+  group: "Групповое",
+  intensive: "Интенсив",
+  marathon: "Марафон",
+  other: "Другое",
+};
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function ProjectPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -19,104 +78,151 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
 
   if (!project) return null;
 
-  const statusLabels = {
-    planning: { label: "Планирование", color: "text-zinc-400", bg: "bg-zinc-800" },
-    active: { label: "Активный", color: "text-emerald-400", bg: "bg-emerald-500/10" },
-    completed: { label: "Завершён", color: "text-zinc-500", bg: "bg-zinc-800/50" },
-  };
+  const expertPct = calcProgress(project.expert, EXPERT_STRING_KEYS);
+  const productPct = calcProgress(project.product, PRODUCT_STRING_KEYS);
+  const recentLaunches = project.launches.slice(-3).reverse();
 
   return (
-    <>
-      <div className="space-y-6">
-        {/* Stats row */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-            <p className="text-xs text-zinc-500 mb-1">Запусков</p>
-            <p className="text-2xl font-bold text-zinc-50">{project.launches.length}</p>
-          </div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-            <p className="text-xs text-zinc-500 mb-1">Активных</p>
-            <p className="text-2xl font-bold text-emerald-400">
-              {project.launches.filter((l) => l.status === "active").length}
-            </p>
-          </div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-            <p className="text-xs text-zinc-500 mb-1">Завершённых</p>
-            <p className="text-2xl font-bold text-zinc-400">
-              {project.launches.filter((l) => l.status === "completed").length}
-            </p>
-          </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+      {/* ── ЭКСПЕРТ ── */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex flex-col gap-4">
+        <div className="flex items-center gap-2">
+          <span className="text-xl">👤</span>
+          <h2 className="font-semibold text-zinc-50">Эксперт</h2>
+          <span className="ml-auto text-xs text-zinc-500">{expertPct}%</span>
         </div>
 
-        {/* Launches */}
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-zinc-50">Запуски</h2>
-            <button
-              onClick={handleNewLaunch}
-              className="flex items-center gap-2 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-sm font-medium transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Новый запуск
-            </button>
-          </div>
-
-          {project.launches.length === 0 ? (
-            <div className="text-center py-12 bg-zinc-900 border border-dashed border-zinc-800 rounded-xl">
-              <Rocket className="w-8 h-8 text-zinc-600 mx-auto mb-3" />
-              <p className="text-sm text-zinc-500 mb-4">Нет запусков</p>
-              <button
-                onClick={handleNewLaunch}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-sm font-medium transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Создать первый запуск
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {project.launches.map((launch) => {
-                const s = statusLabels[launch.status];
-                return (
-                  <button
-                    key={launch.id}
-                    onClick={() => router.push(`/projects/${project.id}/launches/${launch.id}`)}
-                    className="w-full text-left p-4 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-zinc-700 transition-all group"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-zinc-800">
-                          <Rocket className="w-4 h-4 text-zinc-400" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-zinc-50">
-                            #{launch.number} {launch.name || "Запуск"}
-                          </p>
-                          <p className="text-xs text-zinc-500 mt-0.5">
-                            {launch.funnels.length} воронок
-                          </p>
-                        </div>
-                      </div>
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${s.bg} ${s.color}`}>
-                        {s.label}
-                      </span>
-                    </div>
-                    {launch.salesStartDate && (
-                      <div className="flex items-center gap-1.5 text-xs text-zinc-500 mt-3 pl-12">
-                        <Calendar className="w-3.5 h-3.5" />
-                        <span>
-                          Старт продаж:{" "}
-                          {new Date(launch.salesStartDate).toLocaleDateString("ru-RU")}
-                        </span>
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+          <p className="font-medium text-zinc-100 truncate">
+            {project.expert.name || (
+              <span className="text-zinc-500 font-normal">Не заполнено</span>
+            )}
+          </p>
+          {project.expert.positioning && (
+            <p className="text-zinc-400 text-sm mt-1 line-clamp-1">
+              {project.expert.positioning}
+            </p>
           )}
         </div>
+
+        <ProgressBar pct={expertPct} />
+
+        <button
+          onClick={() => router.push(`/projects/${params.id}/expert`)}
+          className="self-start px-3 py-1.5 text-sm text-violet-400 hover:text-violet-300 hover:bg-violet-500/10 rounded-lg transition-colors"
+        >
+          Редактировать →
+        </button>
       </div>
-    </>
+
+      {/* ── ПРОДУКТ ── */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex flex-col gap-4">
+        <div className="flex items-center gap-2">
+          <span className="text-xl">📦</span>
+          <h2 className="font-semibold text-zinc-50">Продукт</h2>
+          <span className="ml-auto text-xs text-zinc-500">{productPct}%</span>
+        </div>
+
+        <div>
+          <p className="font-medium text-zinc-100 truncate">
+            {project.product.name || (
+              <span className="text-zinc-500 font-normal">Не заполнено</span>
+            )}
+          </p>
+          {(project.product.format || project.product.price > 0) && (
+            <p className="text-zinc-400 text-sm mt-1">
+              {FORMAT_LABELS[project.product.format] ?? project.product.format}
+              {project.product.price > 0 &&
+                ` · ${project.product.price.toLocaleString()} ${project.product.currency}`}
+            </p>
+          )}
+        </div>
+
+        <ProgressBar pct={productPct} />
+
+        <button
+          onClick={() => router.push(`/projects/${params.id}/product`)}
+          className="self-start px-3 py-1.5 text-sm text-violet-400 hover:text-violet-300 hover:bg-violet-500/10 rounded-lg transition-colors"
+        >
+          Редактировать →
+        </button>
+      </div>
+
+      {/* ── АУДИТОРИЯ ── */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex flex-col gap-4">
+        <div className="flex items-center gap-2">
+          <span className="text-xl">👥</span>
+          <h2 className="font-semibold text-zinc-50">Аудитория</h2>
+        </div>
+
+        <p className="text-zinc-400 text-sm">
+          {project.audience.archetypes.length} архетипов
+          {" · "}
+          {project.audience.pains.filter(Boolean).length} болей
+          {" · "}
+          {project.audience.fears.filter(Boolean).length} страхов
+        </p>
+
+        <button
+          onClick={() => router.push(`/projects/${params.id}/audience`)}
+          className="self-start px-3 py-1.5 text-sm text-violet-400 hover:text-violet-300 hover:bg-violet-500/10 rounded-lg transition-colors mt-auto"
+        >
+          Редактировать →
+        </button>
+      </div>
+
+      {/* ── ЗАПУСКИ ── */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex flex-col gap-4">
+        <div className="flex items-center gap-2">
+          <span className="text-xl">🚀</span>
+          <h2 className="font-semibold text-zinc-50">Запуски</h2>
+        </div>
+
+        {recentLaunches.length === 0 ? (
+          <p className="text-zinc-500 text-sm">Запусков пока нет</p>
+        ) : (
+          <div className="space-y-2">
+            {recentLaunches.map((launch) => {
+              const badge = STATUS_BADGE[launch.status];
+              return (
+                <button
+                  key={launch.id}
+                  onClick={() =>
+                    router.push(`/projects/${params.id}/launches/${launch.id}`)
+                  }
+                  className="w-full flex items-center justify-between text-left px-3 py-2 rounded-lg hover:bg-zinc-800 transition-colors"
+                >
+                  <span className="text-sm text-zinc-200 truncate">
+                    #{launch.number} {launch.name || "Запуск"}
+                  </span>
+                  <span
+                    className={`ml-2 flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${badge.className}`}
+                  >
+                    {badge.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="flex items-center gap-2 mt-auto pt-2 border-t border-zinc-800">
+          <button
+            onClick={() => router.push(`/projects/${params.id}/launches`)}
+            className="px-3 py-1.5 text-sm text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition-colors"
+          >
+            Все запуски
+          </button>
+          <button
+            onClick={handleNewLaunch}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-violet-400 hover:text-violet-300 hover:bg-violet-500/10 rounded-lg transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Новый запуск
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
