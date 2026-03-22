@@ -1,26 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getProject, saveLaunch, createEmptyLaunch } from "@/lib/storage";
-import { Project } from "@/lib/types";
-import ProjectLayout from "@/components/layout/ProjectLayout";
+import { saveLaunch, createEmptyLaunch } from "@/lib/storage";
+import { useProjectContext } from "@/lib/context/ProjectContext";
 import { Plus, Rocket, Calendar } from "lucide-react";
 
 export default function LaunchesPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const [project, setProject] = useState<Project | null>(null);
-
-  useEffect(() => {
-    const p = getProject(params.id);
-    if (!p) { router.push("/"); return; }
-    setProject(p);
-  }, [params.id, router]);
+  const { project, refreshProject } = useProjectContext();
 
   const handleNewLaunch = () => {
     if (!project) return;
     const launch = createEmptyLaunch(project.launches.length + 1);
     saveLaunch(project.id, launch);
+    refreshProject();
     router.push(`/projects/${project.id}/launches/${launch.id}`);
   };
 
@@ -33,7 +26,7 @@ export default function LaunchesPage({ params }: { params: { id: string } }) {
   };
 
   return (
-    <ProjectLayout project={project} activeSection="launches">
+    <>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-zinc-50">Запуски</h1>
@@ -86,6 +79,6 @@ export default function LaunchesPage({ params }: { params: { id: string } }) {
           </div>
         )}
       </div>
-    </ProjectLayout>
+    </>
   );
 }

@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { getProject, getLaunch, saveLaunch } from "@/lib/storage";
-import { Project, Launch, CalendarPost } from "@/lib/types";
-import LaunchLayout from "@/components/layout/LaunchLayout";
+import { saveLaunch } from "@/lib/storage";
+import { Launch, CalendarPost } from "@/lib/types";
+import { useProjectContext } from "@/lib/context/ProjectContext";
+import { useLaunchContext } from "@/lib/context/LaunchContext";
 import { nanoid } from "@/lib/storage";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -31,24 +31,20 @@ const WARMUP_COLORS = {
 };
 
 export default function CalendarPage({ params }: { params: { id: string; lid: string } }) {
-  const router = useRouter();
-  const [project, setProject] = useState<Project | null>(null);
+  const { project } = useProjectContext();
+  const { launch: ctxLaunch, refreshLaunch } = useLaunchContext();
   const [launch, setLaunch] = useState<Launch | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const p = getProject(params.id);
-    if (!p) { router.push("/"); return; }
-    const l = getLaunch(params.id, params.lid);
-    if (!l) { router.push(`/projects/${params.id}`); return; }
-    setProject(p);
-    setLaunch(JSON.parse(JSON.stringify(l)));
-  }, [params.id, params.lid, router]);
+    if (ctxLaunch) setLaunch(JSON.parse(JSON.stringify(ctxLaunch)));
+  }, [ctxLaunch?.id]);
 
   const handleSave = () => {
     if (!project || !launch) return;
     setSaving(true);
     saveLaunch(project.id, launch);
+    refreshLaunch();
     setTimeout(() => setSaving(false), 600);
   };
 
@@ -87,7 +83,7 @@ export default function CalendarPage({ params }: { params: { id: string; lid: st
   const sorted = [...launch.calendar].sort((a, b) => a.date.localeCompare(b.date));
 
   return (
-    <LaunchLayout project={project} launch={launch} activeSection="calendar">
+    <>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-zinc-50">Контент-план</h1>
@@ -180,6 +176,6 @@ export default function CalendarPage({ params }: { params: { id: string; lid: st
           </div>
         )}
       </div>
-    </LaunchLayout>
+    </>
   );
 }

@@ -1,23 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { getProject, saveProject } from "@/lib/storage";
-import { Project, Product } from "@/lib/types";
-import ProjectLayout from "@/components/layout/ProjectLayout";
+import { saveProject } from "@/lib/storage";
+import { Product } from "@/lib/types";
+import { useProjectContext } from "@/lib/context/ProjectContext";
 
 export default function ProductPage({ params }: { params: { id: string } }) {
-  const router = useRouter();
-  const [project, setProject] = useState<Project | null>(null);
+  const { project, refreshProject } = useProjectContext();
   const [product, setProduct] = useState<Product | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const p = getProject(params.id);
-    if (!p) { router.push("/"); return; }
-    setProject(p);
-    setProduct({ ...p.product });
-  }, [params.id, router]);
+    if (project) setProduct({ ...project.product });
+  }, [project?.id]);
 
   const handleChange = (key: keyof Product, value: unknown) => {
     setProduct((prev) => prev ? { ...prev, [key]: value } : null);
@@ -26,16 +21,15 @@ export default function ProductPage({ params }: { params: { id: string } }) {
   const handleSave = () => {
     if (!project || !product) return;
     setSaving(true);
-    const updated = { ...project, product, updatedAt: new Date().toISOString() };
-    saveProject(updated);
-    setProject(updated);
+    saveProject({ ...project, product, updatedAt: new Date().toISOString() });
+    refreshProject();
     setTimeout(() => setSaving(false), 600);
   };
 
   if (!project || !product) return null;
 
   return (
-    <ProjectLayout project={project} activeSection="product">
+    <>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-zinc-50">Продукт</h1>
@@ -171,6 +165,6 @@ export default function ProductPage({ params }: { params: { id: string } }) {
           </div>
         </div>
       </div>
-    </ProjectLayout>
+    </>
   );
 }

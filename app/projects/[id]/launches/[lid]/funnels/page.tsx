@@ -1,37 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getProject, getLaunch, saveFunnel, createEmptyFunnel } from "@/lib/storage";
-import { Project, Launch } from "@/lib/types";
-import LaunchLayout from "@/components/layout/LaunchLayout";
+import { saveFunnel, createEmptyFunnel } from "@/lib/storage";
+import { useProjectContext } from "@/lib/context/ProjectContext";
+import { useLaunchContext } from "@/lib/context/LaunchContext";
 import { Plus, Filter as FunnelIcon, TrendingUp, Users } from "lucide-react";
 
 export default function FunnelsPage({ params }: { params: { id: string; lid: string } }) {
   const router = useRouter();
-  const [project, setProject] = useState<Project | null>(null);
-  const [launch, setLaunch] = useState<Launch | null>(null);
-
-  useEffect(() => {
-    const p = getProject(params.id);
-    if (!p) { router.push("/"); return; }
-    const l = getLaunch(params.id, params.lid);
-    if (!l) { router.push(`/projects/${params.id}`); return; }
-    setProject(p);
-    setLaunch(l);
-  }, [params.id, params.lid, router]);
+  const { project } = useProjectContext();
+  const { launch, refreshLaunch } = useLaunchContext();
 
   const handleNewFunnel = () => {
     if (!project || !launch) return;
     const funnel = createEmptyFunnel();
     saveFunnel(project.id, launch.id, funnel);
+    refreshLaunch();
     router.push(`/projects/${params.id}/launches/${params.lid}/funnels/${funnel.id}`);
   };
 
   if (!project || !launch) return null;
 
   return (
-    <LaunchLayout project={project} launch={launch} activeSection="funnels">
+    <>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-zinc-50">Воронки</h1>
@@ -95,6 +86,6 @@ export default function FunnelsPage({ params }: { params: { id: string; lid: str
           </div>
         )}
       </div>
-    </LaunchLayout>
+    </>
   );
 }

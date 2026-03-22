@@ -1,25 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { getProject, getLaunch } from "@/lib/storage";
-import { Project, Launch } from "@/lib/types";
-import LaunchLayout from "@/components/layout/LaunchLayout";
+import { useProjectContext } from "@/lib/context/ProjectContext";
+import { useLaunchContext } from "@/lib/context/LaunchContext";
 import { calcTotalRevenue, calcGap, calcBestSource } from "@/lib/calculations";
 
 export default function LaunchAnalyticsPage({ params }: { params: { id: string; lid: string } }) {
-  const router = useRouter();
-  const [project, setProject] = useState<Project | null>(null);
-  const [launch, setLaunch] = useState<Launch | null>(null);
-
-  useEffect(() => {
-    const p = getProject(params.id);
-    if (!p) { router.push("/"); return; }
-    const l = getLaunch(params.id, params.lid);
-    if (!l) { router.push(`/projects/${params.id}`); return; }
-    setProject(p);
-    setLaunch(l);
-  }, [params.id, params.lid, router]);
+  const { project } = useProjectContext();
+  const { launch } = useLaunchContext();
 
   if (!project || !launch) return null;
 
@@ -36,7 +23,7 @@ export default function LaunchAnalyticsPage({ params }: { params: { id: string; 
     .reduce((sum, p) => sum + p.reactions, 0);
 
   return (
-    <LaunchLayout project={project} launch={launch} activeSection="analytics">
+    <>
       <div className="space-y-6">
         <h1 className="text-xl font-bold text-zinc-50">Аналитика запуска</h1>
 
@@ -125,6 +112,6 @@ export default function LaunchAnalyticsPage({ params }: { params: { id: string; 
           </div>
         )}
       </div>
-    </LaunchLayout>
+    </>
   );
 }

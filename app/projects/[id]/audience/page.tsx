@@ -1,32 +1,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { getProject, saveProject } from "@/lib/storage";
-import { Project, Audience, Archetype } from "@/lib/types";
-import ProjectLayout from "@/components/layout/ProjectLayout";
+import { saveProject } from "@/lib/storage";
+import { Audience, Archetype } from "@/lib/types";
+import { useProjectContext } from "@/lib/context/ProjectContext";
 import { Plus, Trash2 } from "lucide-react";
 import { nanoid } from "@/lib/storage";
 
 export default function AudiencePage({ params }: { params: { id: string } }) {
-  const router = useRouter();
-  const [project, setProject] = useState<Project | null>(null);
+  const { project, refreshProject } = useProjectContext();
   const [audience, setAudience] = useState<Audience | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const p = getProject(params.id);
-    if (!p) { router.push("/"); return; }
-    setProject(p);
-    setAudience(JSON.parse(JSON.stringify(p.audience)));
-  }, [params.id, router]);
+    if (project) setAudience(JSON.parse(JSON.stringify(project.audience)));
+  }, [project?.id]);
 
   const handleSave = () => {
     if (!project || !audience) return;
     setSaving(true);
-    const updated = { ...project, audience, updatedAt: new Date().toISOString() };
-    saveProject(updated);
-    setProject(updated);
+    saveProject({ ...project, audience, updatedAt: new Date().toISOString() });
+    refreshProject();
     setTimeout(() => setSaving(false), 600);
   };
 
@@ -77,7 +71,7 @@ export default function AudiencePage({ params }: { params: { id: string } }) {
   ];
 
   return (
-    <ProjectLayout project={project} activeSection="audience">
+    <>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-zinc-50">Аудитория</h1>
@@ -167,6 +161,6 @@ export default function AudiencePage({ params }: { params: { id: string } }) {
           ))}
         </div>
       </div>
-    </ProjectLayout>
+    </>
   );
 }

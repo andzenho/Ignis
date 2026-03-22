@@ -1,29 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getProject, saveLaunch, createEmptyLaunch } from "@/lib/storage";
-import { Project } from "@/lib/types";
-import ProjectLayout from "@/components/layout/ProjectLayout";
+import { saveLaunch, createEmptyLaunch } from "@/lib/storage";
+import { useProjectContext } from "@/lib/context/ProjectContext";
 import { Plus, Rocket, Calendar, TrendingUp, Clock } from "lucide-react";
 
 export default function ProjectPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const [project, setProject] = useState<Project | null>(null);
-
-  useEffect(() => {
-    const p = getProject(params.id);
-    if (!p) {
-      router.push("/");
-      return;
-    }
-    setProject(p);
-  }, [params.id, router]);
+  const { project, refreshProject } = useProjectContext();
 
   const handleNewLaunch = () => {
     if (!project) return;
     const launch = createEmptyLaunch(project.launches.length + 1);
     saveLaunch(project.id, launch);
+    refreshProject();
     router.push(`/projects/${project.id}/launches/${launch.id}`);
   };
 
@@ -36,7 +26,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   };
 
   return (
-    <ProjectLayout project={project} activeSection="overview">
+    <>
       <div className="space-y-6">
         {/* Stats row */}
         <div className="grid grid-cols-3 gap-4">
@@ -127,6 +117,6 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
           )}
         </div>
       </div>
-    </ProjectLayout>
+    </>
   );
 }
